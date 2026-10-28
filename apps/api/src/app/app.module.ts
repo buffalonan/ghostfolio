@@ -57,6 +57,7 @@ import { InfoModule } from './endpoints/info/info.module';
 import { LogoModule } from './endpoints/logo/logo.module';
 import { MarketDataModule } from './endpoints/market-data/market-data.module';
 import { McpModule } from './endpoints/mcp/mcp.module';
+import { NetWorthModule } from './endpoints/net-worth/net-worth.module';
 import { PlatformsModule } from './endpoints/platforms/platforms.module';
 import { PublicModule } from './endpoints/public/public.module';
 import { SitemapModule } from './endpoints/sitemap/sitemap.module';
@@ -127,6 +128,7 @@ import { UserModule } from './user/user.module';
     LogoModule,
     MarketDataModule,
     McpModule,
+    NetWorthModule,
     PlatformsModule,
     PortfolioModule,
     PortfolioSnapshotQueueModule,

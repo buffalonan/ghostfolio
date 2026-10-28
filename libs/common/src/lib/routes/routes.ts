@@ -174,6 +174,11 @@ export const internalRoutes = {
     routerLink: ['/i18n'],
     title: $localize`Internationalization`
   },
+  netWorth: {
+    path: 'net-worth',
+    routerLink: ['/net-worth'],
+    title: $localize`Net Worth`
+  },
   portfolio: {
     path: 'portfolio',
     routerLink: ['/portfolio'],

@@ -2,6 +2,7 @@ import {
   CreateAccessDto,
   CreateAccountBalanceDto,
   CreateAccountDto,
+  CreateNetWorthSnapshotDto,
   CreateOrderDto,
   CreatePlatformDto,
   CreateTagDto,
@@ -46,6 +47,7 @@ import {
   InfoItem,
   LookupResponse,
   MarketDataOfMarketsResponse,
+  NetWorthResponse,
   OAuthResponse,
   PlatformResponse,
   PlatformsResponse,
@@ -366,6 +368,10 @@ export class DataService {
 
   public deleteUser(aId: string) {
     return this.http.delete<UserModel>(`/api/v1/user/${aId}`);
+  }
+
+  public deleteNetWorthSnapshot(aId: string) {
+    return this.http.delete<void>(`/api/v1/net-worth/${aId}`);
   }
 
   public deleteWatchlistItem({ dataSource, symbol }: AssetProfileIdentifier) {
@@ -850,6 +856,10 @@ export class DataService {
     return this.http.get<TagWithAccountAndActivityCount[]>('/api/v1/tags');
   }
 
+  public fetchNetWorth() {
+    return this.http.get<NetWorthResponse>('/api/v1/net-worth');
+  }
+
   public fetchWatchlist() {
     return this.http.get<WatchlistResponse>('/api/v1/watchlist');
   }
@@ -918,6 +928,10 @@ export class DataService {
 
   public postUser(aData: CreateUserDto) {
     return this.http.post<UserItem>('/api/v1/user', aData);
+  }
+
+  public postNetWorthSnapshot(aSnapshot: CreateNetWorthSnapshotDto) {
+    return this.http.post('/api/v1/net-worth', aSnapshot);
   }
 
   public postWatchlistItem(watchlistItem: CreateWatchlistItemDto) {

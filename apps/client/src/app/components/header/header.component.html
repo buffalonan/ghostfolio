@@ -50,6 +50,20 @@
           i18n
           mat-button
           [class]="{
+            'fw-bold': currentRoute() === internalRoutes.netWorth.path,
+            'text-decoration-underline':
+              currentRoute() === internalRoutes.netWorth.path
+          }"
+          [routerLink]="routerLinkNetWorth"
+          >Net Worth</a
+        >
+      </li>
+      <li class="list-inline-item">
+        <a
+          class="d-none d-sm-block rounded"
+          i18n
+          mat-button
+          [class]="{
             'fw-bold': currentRoute() === internalRoutes.accounts.path,
             'text-decoration-underline':
               currentRoute() === internalRoutes.accounts.path
@@ -255,6 +269,14 @@
             [class.fw-bold]="currentRoute() === internalRoutes.portfolio.path"
             [routerLink]="routerLinkPortfolio"
             >Portfolio</a
+          >
+          <a
+            class="d-flex d-sm-none"
+            i18n
+            mat-menu-item
+            [class.fw-bold]="currentRoute() === internalRoutes.netWorth.path"
+            [routerLink]="routerLinkNetWorth"
+            >Net Worth</a
           >
           <a
             class="d-flex d-sm-none"
