@@ -44,7 +44,6 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import {
   BarController,
   BarElement,
@@ -90,7 +89,6 @@ interface NetWorthRow {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     NgxSkeletonLoaderModule
   ],
   selector: 'gf-net-worth-page',
@@ -108,9 +106,12 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
     ];
 
   protected draft: {
-    contribution: number;
+    contribution: number | null;
     date: string;
-    items: NetWorthItem[];
+    items: (Omit<NetWorthItem, 'value'> & {
+      previousValue: number;
+      value: number | null;
+    })[];
     note: string;
   };
   protected hasPermissionToShowValues = false;
@@ -216,13 +217,6 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
     })?.label;
   }
 
-  protected onAddItem() {
-    this.draft.items = [
-      ...this.draft.items,
-      { group: 'CASH', name: '', value: 0 }
-    ];
-  }
-
   protected onCancel() {
     this.isEditorOpen = false;
   }
@@ -250,7 +244,7 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
         contribution: aSnapshot.contribution,
         date: aSnapshot.date.slice(0, 10),
         items: aSnapshot.items.map((item) => {
-          return { ...item };
+          return { ...item, previousValue: item.value };
         }),
         note: aSnapshot.note ?? ''
       };
@@ -259,7 +253,9 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
         contribution: 0,
         date: format(new Date(), 'yyyy-MM-dd'),
         items: this.suggestion.map((item) => {
-          return { ...item, value: Math.round(item.value) };
+          const value = Math.round(item.value);
+
+          return { ...item, value, previousValue: value };
         }),
         note: ''
       };
@@ -268,10 +264,21 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
     this.isEditorOpen = true;
   }
 
-  protected onRemoveItem(aIndex: number) {
-    this.draft.items = this.draft.items.filter((_item, index) => {
-      return index !== aIndex;
-    });
+  // Keep the previous value unless a new one is entered
+  protected onValueBlur(aItem: { previousValue: number; value: number | null }) {
+    if (aItem.value === null || `${aItem.value}` === '') {
+      aItem.value = aItem.previousValue;
+    }
+  }
+
+  // Clear the previous value to type the new one right away
+  protected onValueFocus(aItem: {
+    previousValue: number;
+    value: number | null;
+  }) {
+    if (aItem.value === aItem.previousValue) {
+      aItem.value = null;
+    }
   }
 
   protected onSave() {
@@ -279,13 +286,16 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
       .postNetWorthSnapshot({
         contribution: Number(this.draft.contribution) || 0,
         date: this.draft.date,
-        items: this.draft.items
-          .filter(({ name }) => {
-            return name?.trim();
-          })
-          .map(({ group, name, value }) => {
-            return { group, name: name.trim(), value: Number(value) || 0 };
-          }),
+        items: this.draft.items.map(({ group, name, previousValue, value }) => {
+          return {
+            group,
+            name,
+            value:
+              value === null || `${value}` === ''
+                ? previousValue
+                : Number(value) || 0
+          };
+        }),
         note: this.draft.note || undefined
       })
       .pipe(takeUntilDestroyed(this.destroyRef))

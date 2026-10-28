@@ -181,8 +181,10 @@
                 <input
                   matInput
                   name="contribution"
+                  placeholder="0"
                   type="number"
                   [(ngModel)]="draft.contribution"
+                  (focus)="draft.contribution = draft.contribution || null"
                 />
                 <span matTextSuffix>{{ baseCurrency }}</span>
               </mat-form-field>
@@ -191,55 +193,24 @@
                 <input matInput name="note" [(ngModel)]="draft.note" />
               </mat-form-field>
             </div>
-            @for (
-              item of draft.items;
-              track trackByIndex($index);
-              let index = $index
-            ) {
-              <div class="align-items-center row">
-                <mat-form-field appearance="outline" class="col-5">
-                  <mat-label i18n>Name</mat-label>
-                  <input
-                    matInput
-                    required
-                    [name]="'name' + index"
-                    [(ngModel)]="item.name"
-                  />
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="col-3">
-                  <mat-label i18n>Type</mat-label>
-                  <mat-select [name]="'group' + index" [(ngModel)]="item.group">
-                    @for (group of groups; track group.id) {
-                      <mat-option [value]="group.id">{{
-                        group.label
-                      }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="col-3">
-                  <mat-label i18n>Value</mat-label>
+            <div class="row">
+              @for (item of draft.items; track item.name) {
+                <mat-form-field appearance="outline" class="col-md-6">
+                  <mat-label>{{ item.name }}</mat-label>
                   <input
                     matInput
                     type="number"
-                    [name]="'value' + index"
+                    [name]="'value' + $index"
+                    [placeholder]="(item.previousValue | number: '1.0-0' : locale) ?? ''"
                     [(ngModel)]="item.value"
+                    (blur)="onValueBlur(item)"
+                    (focus)="onValueFocus(item)"
                   />
+                  <span matTextSuffix>{{ baseCurrency }}</span>
                 </mat-form-field>
-                <div class="col-1 pb-3">
-                  <button
-                    mat-button
-                    type="button"
-                    (click)="onRemoveItem(index)"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            }
+              }
+            </div>
             <div class="d-flex">
-              <button mat-button type="button" (click)="onAddItem()">
-                <ng-container i18n>Add Line</ng-container>
-              </button>
               <button
                 class="ms-auto"
                 mat-button
@@ -258,8 +229,9 @@
               </button>
             </div>
             <p class="mt-2 small text-muted" i18n>
-              New months are prefilled with the current values of your
-              accounts. Saving a date which already exists updates it.
+              The fields show the latest values. Click into a field to type the
+              new value, an empty field keeps the latest one. Saving a date
+              which already exists updates it.
             </p>
           </form>
         }
