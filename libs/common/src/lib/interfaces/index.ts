@@ -79,7 +79,8 @@ import type { OAuthResponse } from './responses/oauth-response.interface';
 import type { PlatformResponse } from './responses/platform-response.interface';
 import type {
   NetWorthResponse,
-  NetWorthSnapshotItem
+  NetWorthSnapshotItem,
+  NetWorthTaxItem
 } from './responses/net-worth-response.interface';
 import type { PlatformsResponse } from './responses/platforms-response.interface';
 import type { PortfolioDividendsResponse } from './responses/portfolio-dividends-response.interface';
@@ -186,6 +187,7 @@ export {
   NetWorthItem,
   NetWorthResponse,
   NetWorthSnapshotItem,
+  NetWorthTaxItem,
   PlatformsResponse,
   PortfolioChart,
   PortfolioDetails,

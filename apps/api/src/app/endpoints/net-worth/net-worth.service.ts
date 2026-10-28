@@ -26,9 +26,14 @@ export class NetWorthService {
   }
 
   public async getNetWorth(userId: string): Promise<NetWorthResponse> {
-    const [snapshots, { accounts }] = await Promise.all([
+    const [snapshots, taxes, { accounts }] = await Promise.all([
       this.prismaService.netWorthSnapshot.findMany({
         orderBy: { date: 'asc' },
+        where: { userId }
+      }),
+      this.prismaService.netWorthTax.findMany({
+        orderBy: { year: 'desc' },
+        select: { amount: true, year: true },
         where: { userId }
       }),
       this.portfolioService.getAccountsWithAggregations({
@@ -37,23 +42,48 @@ export class NetWorthService {
       })
     ]);
 
+    // The tax is derived from the yearly amounts, hence it is not suggested
     const latestItems: NetWorthItem[] =
       snapshots.length > 0
-        ? this.toSnapshotItem(snapshots.at(-1)).items
+        ? this.toSnapshotItem(snapshots.at(-1)).items.filter(({ group }) => {
+            return group !== 'LIABILITY';
+          })
         : [];
 
-    const valueByAccountName = new Map(
-      accounts.map(({ name, valueInBaseCurrency }) => {
-        return [name, valueInBaseCurrency] as const;
+    const accountByName = new Map(
+      accounts.map((account) => {
+        return [account.name, account] as const;
       })
     );
 
     // Carry over the latest items and refresh the ones which match an account
-    const suggestion: NetWorthItem[] = latestItems.map((item) => {
-      return valueByAccountName.has(item.name)
-        ? { ...item, value: valueByAccountName.get(item.name) }
-        : item;
-    });
+    const suggestion: NetWorthItem[] = await Promise.all(
+      latestItems.map(async (item) => {
+        const account = accountByName.get(item.name);
+
+        if (!account) {
+          return item;
+        }
+
+        if (item.group === 'CRYPTO') {
+          const quantity = await this.getQuantityOfAccount({
+            userId,
+            accountId: account.id
+          });
+
+          if (quantity > 0) {
+            return {
+              ...item,
+              quantity,
+              unitPrice: account.valueInBaseCurrency / quantity,
+              value: account.valueInBaseCurrency
+            };
+          }
+        }
+
+        return { ...item, value: account.valueInBaseCurrency };
+      })
+    );
 
     // Add the accounts which are not yet part of the snapshots
     for (const { activitiesCount, name, valueInBaseCurrency } of accounts) {
@@ -73,6 +103,7 @@ export class NetWorthService {
 
     return {
       suggestion,
+      taxes,
       snapshots: snapshots.map((snapshot) => {
         return this.toSnapshotItem(snapshot);
       })
@@ -91,8 +122,8 @@ export class NetWorthService {
         const data = {
           contribution,
           note,
-          items: items.map(({ group, name, value }) => {
-            return { group, name, value };
+          items: items.map(({ group, name, quantity, value }) => {
+            return { group, name, quantity, value };
           }) as unknown as Prisma.InputJsonValue
         };
 
@@ -106,6 +137,43 @@ export class NetWorthService {
         });
       })
     );
+  }
+
+  public async upsertTax({
+    amount,
+    userId,
+    year
+  }: {
+    amount: number;
+    userId: string;
+    year: number;
+  }) {
+    return this.prismaService.netWorthTax.upsert({
+      create: { amount, userId, year },
+      update: { amount },
+      where: { userId_year: { userId, year } }
+    });
+  }
+
+  private async getQuantityOfAccount({
+    accountId,
+    userId
+  }: {
+    accountId: string;
+    userId: string;
+  }) {
+    const activities = await this.prismaService.order.findMany({
+      select: { quantity: true, type: true },
+      where: {
+        accountId,
+        userId,
+        type: { in: ['BUY', 'SELL'] }
+      }
+    });
+
+    return activities.reduce((sum, { quantity, type }) => {
+      return type === 'SELL' ? sum - quantity : sum + quantity;
+    }, 0);
   }
 
   private toSnapshotItem({

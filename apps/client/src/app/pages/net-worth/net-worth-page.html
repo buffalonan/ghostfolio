@@ -89,7 +89,7 @@
             </div>
             <div class="col-6 col-md-4 col-xl-2">
               <div class="kpi">
-                <div class="small text-muted" i18n>Tax Provision</div>
+                <div class="small text-muted" i18n>Tax</div>
                 <gf-value
                   size="medium"
                   [isCurrency]="true"
@@ -206,7 +206,20 @@
                     (blur)="onValueBlur(item)"
                     (focus)="onValueFocus(item)"
                   />
-                  <span matTextSuffix>{{ baseCurrency }}</span>
+                  <span matTextSuffix>{{ item.unit ?? baseCurrency }}</span>
+                  @if (item.unitPrice) {
+                    <mat-hint
+                      >≈
+                      {{
+                        (item.value ?? item.previousValue) * (item.unitPrice ?? 0)
+                          | number: '1.0-0' : locale
+                      }}
+                      {{ baseCurrency }} ({{
+                        item.unitPrice | number: '1.0-0' : locale
+                      }}
+                      {{ baseCurrency }}/{{ item.unit }})</mat-hint
+                    >
+                  }
                 </mat-form-field>
               }
             </div>
@@ -235,6 +248,33 @@
             </p>
           </form>
         }
+
+        <div class="mb-3">
+          <h5 class="mb-1" i18n>Tax per Year</h5>
+          <p class="small text-muted" i18n>
+            Tax to be paid for each year, accrued over its 12 months in the
+            column Tax. Set it to 0 once it is paid.
+          </p>
+          <div class="row">
+            @for (taxInput of taxInputs; track taxInput.year) {
+              <mat-form-field
+                appearance="outline"
+                class="col-6 col-md-3 col-xl-2"
+              >
+                <mat-label>{{ taxInput.year }}</mat-label>
+                <input
+                  matInput
+                  placeholder="0"
+                  type="number"
+                  [disabled]="!hasPermissionToUpdate"
+                  [name]="'tax' + taxInput.year"
+                  [(ngModel)]="taxInput.amount"
+                  (change)="onTaxChange(taxInput)"
+                />
+              </mat-form-field>
+            }
+          </div>
+        </div>
 
         @if (rows.length > 0) {
           <div class="mb-5 table-responsive">

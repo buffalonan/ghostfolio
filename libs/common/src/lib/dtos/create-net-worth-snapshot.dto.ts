@@ -3,6 +3,7 @@ import type { NetWorthGroup } from '@ghostfolio/common/interfaces';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  IsInt,
   IsArray,
   IsIn,
   IsISO8601,
@@ -20,6 +21,10 @@ export class NetWorthItemDto {
   @IsString()
   @MaxLength(100)
   name: string;
+
+  @IsNumber()
+  @IsOptional()
+  quantity?: number;
 
   @IsNumber()
   value: number;
@@ -43,6 +48,14 @@ export class CreateNetWorthSnapshotDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+}
+
+export class UpdateNetWorthTaxDto {
+  @IsNumber()
+  amount: number;
+
+  @IsInt()
+  year: number;
 }
 
 export class ImportNetWorthSnapshotsDto {

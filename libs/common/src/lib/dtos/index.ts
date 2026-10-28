@@ -10,7 +10,8 @@ import { CreateAssetProfileDto } from './create-asset-profile.dto';
 import {
   CreateNetWorthSnapshotDto,
   ImportNetWorthSnapshotsDto,
-  NetWorthItemDto
+  NetWorthItemDto,
+  UpdateNetWorthTaxDto
 } from './create-net-worth-snapshot.dto';
 import { CreateOrderDto } from './create-order.dto';
 import { CreatePlatformDto } from './create-platform.dto';
@@ -66,6 +67,7 @@ export {
   UpdateAssetProfileDto,
   UpdateBulkMarketDataDto,
   UpdateMarketDataDto,
+  UpdateNetWorthTaxDto,
   UpdateOrderDto,
   UpdateOwnAccessTokenDto,
   UpdatePlatformDto,

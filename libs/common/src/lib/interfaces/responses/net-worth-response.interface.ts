@@ -8,6 +8,11 @@ export interface NetWorthSnapshotItem {
   note?: string;
 }
 
+export interface NetWorthTaxItem {
+  amount: number;
+  year: number;
+}
+
 export interface NetWorthResponse {
   snapshots: NetWorthSnapshotItem[];
 
@@ -16,4 +21,9 @@ export interface NetWorthResponse {
    * accounts with the same name
    */
   suggestion: NetWorthItem[];
+
+  /**
+   * Tax to be paid per year, which is accrued monthly
+   */
+  taxes: NetWorthTaxItem[];
 }

@@ -66,6 +66,19 @@ import OpenColor from 'open-color';
 
 const { blue, grape, green, orange, red, teal } = OpenColor;
 
+interface DraftItem {
+  group: NetWorthGroup;
+  name: string;
+  previousValue: number;
+
+  /**
+   * Units like bitcoins, in which case the value is quantity × unit price
+   */
+  unit?: string;
+  unitPrice?: number;
+  value: number | null;
+}
+
 interface NetWorthRow {
   byGroup: Record<NetWorthGroup, number>;
   change?: number;
@@ -102,16 +115,13 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
       { color: teal[5], id: 'INVESTMENTS', label: $localize`Investments` },
       { color: grape[5], id: 'PENSION', label: $localize`Pension` },
       { color: orange[5], id: 'CRYPTO', label: $localize`Crypto` },
-      { color: red[5], id: 'LIABILITY', label: $localize`Liabilities` }
+      { color: red[5], id: 'LIABILITY', label: $localize`Tax` }
     ];
 
   protected draft: {
     contribution: number | null;
     date: string;
-    items: (Omit<NetWorthItem, 'value'> & {
-      previousValue: number;
-      value: number | null;
-    })[];
+    items: DraftItem[];
     note: string;
   };
   protected hasPermissionToShowValues = false;
@@ -141,6 +151,8 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
   private readonly monthlyCanvas =
     viewChild<ElementRef<HTMLCanvasElement>>('monthlyCanvas');
   private suggestion: NetWorthItem[] = [];
+  private taxByYear = new Map<number, number>();
+  protected taxInputs: { amount: number | null; year: number }[] = [];
   private readonly userService = inject(UserService);
   private readonly yearlyCanvas =
     viewChild<ElementRef<HTMLCanvasElement>>('yearlyCanvas');
@@ -243,9 +255,13 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
       this.draft = {
         contribution: aSnapshot.contribution,
         date: aSnapshot.date.slice(0, 10),
-        items: aSnapshot.items.map((item) => {
-          return { ...item, previousValue: item.value };
-        }),
+        items: aSnapshot.items
+          .filter(({ group }) => {
+            return group !== 'LIABILITY';
+          })
+          .map((item) => {
+            return this.toDraftItem(item);
+          }),
         note: aSnapshot.note ?? ''
       };
     } else {
@@ -253,9 +269,7 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
         contribution: 0,
         date: format(new Date(), 'yyyy-MM-dd'),
         items: this.suggestion.map((item) => {
-          const value = Math.round(item.value);
-
-          return { ...item, value, previousValue: value };
+          return this.toDraftItem(item);
         }),
         note: ''
       };
@@ -286,16 +300,18 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
       .postNetWorthSnapshot({
         contribution: Number(this.draft.contribution) || 0,
         date: this.draft.date,
-        items: this.draft.items.map(({ group, name, previousValue, value }) => {
-          return {
-            group,
-            name,
-            value:
+        items: this.draft.items.map(
+          ({ group, name, previousValue, unitPrice, value }) => {
+            const input =
               value === null || `${value}` === ''
                 ? previousValue
-                : Number(value) || 0
-          };
-        }),
+                : Number(value) || 0;
+
+            return unitPrice
+              ? { group, name, quantity: input, value: input * unitPrice }
+              : { group, name, value: input };
+          }
+        ),
         note: this.draft.note || undefined
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -306,8 +322,64 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
       });
   }
 
+  protected onTaxChange(aTaxInput: { amount: number | null; year: number }) {
+    const amount = Number(aTaxInput.amount) || 0;
+
+    if (amount === (this.taxByYear.get(aTaxInput.year) ?? 0)) {
+      return;
+    }
+
+    this.dataService
+      .putNetWorthTax({ amount, year: aTaxInput.year })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.fetchNetWorth();
+      });
+  }
+
   protected trackByIndex(index: number) {
     return index;
+  }
+
+  /**
+   * Tax accrued until the given date: the amount of each previous year in full
+   * and the amount of the current year prorated by month
+   */
+  private getTax(aDate: Date) {
+    const year = aDate.getUTCFullYear();
+    let tax = 0;
+
+    for (const [taxYear, amount] of this.taxByYear) {
+      if (taxYear < year) {
+        tax += amount;
+      } else if (taxYear === year) {
+        tax += (amount * (aDate.getUTCMonth() + 1)) / 12;
+      }
+    }
+
+    return tax;
+  }
+
+  private toDraftItem({ group, name, quantity, unitPrice, value }: NetWorthItem) {
+    const price = unitPrice ?? (quantity ? value / quantity : undefined);
+
+    if (group === 'CRYPTO' && quantity && price) {
+      return {
+        group,
+        name,
+        previousValue: quantity,
+        unit: 'BTC',
+        unitPrice: price,
+        value: quantity
+      };
+    }
+
+    return {
+      group,
+      name,
+      previousValue: Math.round(value),
+      value: Math.round(value)
+    };
   }
 
   private buildRows(aSnapshots: NetWorthSnapshotItem[]) {
@@ -324,8 +396,13 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
       };
 
       for (const { group, value } of snapshot.items) {
-        byGroup[group] = (byGroup[group] ?? 0) + value;
+        // The tax is derived from the yearly amounts
+        if (group !== 'LIABILITY') {
+          byGroup[group] = (byGroup[group] ?? 0) + value;
+        }
       }
+
+      byGroup.LIABILITY = this.getTax(new Date(snapshot.date));
 
       contributionCumulative += snapshot.contribution;
 
@@ -421,8 +498,28 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
     this.dataService
       .fetchNetWorth()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(({ snapshots, suggestion }) => {
+      .subscribe(({ snapshots, suggestion, taxes }) => {
         this.suggestion = suggestion;
+        this.taxByYear = new Map(
+          taxes.map(({ amount, year }) => {
+            return [year, amount];
+          })
+        );
+
+        const years = new Set([
+          new Date().getFullYear(),
+          ...snapshots.map(({ date }) => {
+            return new Date(date).getUTCFullYear();
+          })
+        ]);
+
+        this.taxInputs = [...years]
+          .sort((a, b) => {
+            return b - a;
+          })
+          .map((year) => {
+            return { year, amount: this.taxByYear.get(year) ?? null };
+          });
 
         this.buildRows(snapshots);
 

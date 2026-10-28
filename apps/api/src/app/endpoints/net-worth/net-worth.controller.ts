@@ -3,7 +3,8 @@ import { Impersonation } from '@ghostfolio/api/decorators/impersonation.decorato
 import { RequiresScope } from '@ghostfolio/api/decorators/requires-scope.decorator';
 import {
   CreateNetWorthSnapshotDto,
-  ImportNetWorthSnapshotsDto
+  ImportNetWorthSnapshotsDto,
+  UpdateNetWorthTaxDto
 } from '@ghostfolio/common/dtos';
 import { NetWorthResponse } from '@ghostfolio/common/interfaces';
 import { permissions } from '@ghostfolio/common/permissions';
@@ -17,7 +18,8 @@ import {
   Get,
   HttpException,
   Param,
-  Post
+  Post,
+  Put
 } from '@nestjs/common';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
@@ -65,6 +67,16 @@ export class NetWorthController {
     await this.netWorthService.upsertSnapshots({ snapshots, userId });
 
     return { count: snapshots.length };
+  }
+
+  @HasPermission(permissions.updateAccount)
+  @Put('tax')
+  @RequiresScope(scopes.accountUpdate)
+  public async updateTax(
+    @Body() { amount, year }: UpdateNetWorthTaxDto,
+    @Impersonation() { userId }: ImpersonationContext
+  ) {
+    return this.netWorthService.upsertTax({ amount, userId, year });
   }
 
   @HasPermission(permissions.updateAccount)

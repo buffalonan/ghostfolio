@@ -13,6 +13,7 @@ import {
   UpdateAccessDto,
   UpdateAccountDto,
   UpdateBulkMarketDataDto,
+  UpdateNetWorthTaxDto,
   UpdateOrderDto,
   UpdateOwnAccessTokenDto,
   UpdatePlatformDto,
@@ -936,6 +937,10 @@ export class DataService {
 
   public postWatchlistItem(watchlistItem: CreateWatchlistItemDto) {
     return this.http.post('/api/v1/watchlist', watchlistItem);
+  }
+
+  public putNetWorthTax(aTax: UpdateNetWorthTaxDto) {
+    return this.http.put('/api/v1/net-worth/tax', aTax);
   }
 
   public putAccess(aAccess: UpdateAccessDto) {
