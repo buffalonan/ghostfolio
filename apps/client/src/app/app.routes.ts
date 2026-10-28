@@ -89,6 +89,11 @@ export const routes: Routes = [
       import('./pages/markets/markets-page.routes').then((m) => m.routes)
   },
   {
+    path: internalRoutes.netWorth.path,
+    loadChildren: () =>
+      import('./pages/net-worth/net-worth-page.routes').then((m) => m.routes)
+  },
+  {
     path: publicRoutes.openStartup.path,
     loadChildren: () =>
       import('./pages/open/open-page.routes').then((m) => m.routes)

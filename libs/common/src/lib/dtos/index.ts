@@ -7,6 +7,12 @@ import { CreateAccountDto } from './create-account.dto';
 import { CreateAssetProfileSplitDto } from './create-asset-profile-split.dto';
 import { CreateAssetProfileWithMarketDataDto } from './create-asset-profile-with-market-data.dto';
 import { CreateAssetProfileDto } from './create-asset-profile.dto';
+import {
+  CreateNetWorthSnapshotDto,
+  ImportNetWorthSnapshotsDto,
+  NetWorthItemDto,
+  UpdateNetWorthTaxDto
+} from './create-net-worth-snapshot.dto';
 import { CreateOrderDto } from './create-order.dto';
 import { CreatePlatformDto } from './create-platform.dto';
 import { CreateTagDto } from './create-tag.dto';
@@ -41,6 +47,7 @@ export {
   CreateAssetProfileDto,
   CreateAssetProfileSplitDto,
   CreateAssetProfileWithMarketDataDto,
+  CreateNetWorthSnapshotDto,
   CreateOrderDto,
   CreatePlatformDto,
   CreateTagDto,
@@ -48,7 +55,9 @@ export {
   CreateWatchlistItemDto,
   DeleteOwnUserDto,
   HoldingDto,
+  ImportNetWorthSnapshotsDto,
   MergeAssetProfileDto,
+  NetWorthItemDto,
   ScraperConfigurationDto,
   SectorDto,
   TransferBalanceDto,
@@ -58,6 +67,7 @@ export {
   UpdateAssetProfileDto,
   UpdateBulkMarketDataDto,
   UpdateMarketDataDto,
+  UpdateNetWorthTaxDto,
   UpdateOrderDto,
   UpdateOwnAccessTokenDto,
   UpdatePlatformDto,

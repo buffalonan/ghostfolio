@@ -1,0 +1,37 @@
+:host {
+  display: block;
+
+  .chart-container {
+    aspect-ratio: 16 / 9;
+    position: relative;
+  }
+
+  .kpi {
+    border: 1px solid rgba(var(--dark-dividers));
+    border-radius: 0.25rem;
+    height: 100%;
+    padding: 0.75rem 1rem;
+  }
+
+  .legend-dot {
+    border-radius: 50%;
+    display: inline-block;
+    height: 0.6rem;
+    margin-right: 0.25rem;
+    width: 0.6rem;
+  }
+
+  .snapshot-table {
+    td,
+    th {
+      padding: 0.25rem 0.5rem;
+      white-space: nowrap;
+    }
+  }
+}
+
+:host-context(.theme-dark) {
+  .kpi {
+    border-color: rgba(var(--light-dividers));
+  }
+}

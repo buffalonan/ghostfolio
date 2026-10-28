@@ -77,6 +77,11 @@ import type { LookupResponse } from './responses/lookup-response.interface';
 import type { MarketDataOfMarketsResponse } from './responses/market-data-of-markets-response.interface';
 import type { OAuthResponse } from './responses/oauth-response.interface';
 import type { PlatformResponse } from './responses/platform-response.interface';
+import type {
+  NetWorthResponse,
+  NetWorthSnapshotItem,
+  NetWorthTaxItem
+} from './responses/net-worth-response.interface';
 import type { PlatformsResponse } from './responses/platforms-response.interface';
 import type { PortfolioDividendsResponse } from './responses/portfolio-dividends-response.interface';
 import type { PortfolioHoldingResponse } from './responses/portfolio-holding-response.interface';
@@ -87,6 +92,10 @@ import type { PortfolioReportResponse } from './responses/portfolio-report.inter
 import type { PublicPortfolioResponse } from './responses/public-portfolio-response.interface';
 import type { QuotesResponse } from './responses/quotes-response.interface';
 import type { WatchlistResponse } from './responses/watchlist-response.interface';
+import type {
+  NetWorthGroup,
+  NetWorthItem
+} from './net-worth-item.interface';
 import type { RuleSettings } from './rule-settings.interface';
 import type { ScraperConfiguration } from './scraper-configuration.interface';
 import type {
@@ -174,6 +183,11 @@ export {
   NullableLineChartItem,
   OAuthResponse,
   PlatformResponse,
+  NetWorthGroup,
+  NetWorthItem,
+  NetWorthResponse,
+  NetWorthSnapshotItem,
+  NetWorthTaxItem,
   PlatformsResponse,
   PortfolioChart,
   PortfolioDetails,

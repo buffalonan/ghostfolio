@@ -1,0 +1,361 @@
+<div class="container">
+  <div class="row">
+    <div class="col">
+      <h2 class="d-none d-sm-block h3 mb-3 text-center" i18n>Net Worth</h2>
+
+      @if (isLoading) {
+        <ngx-skeleton-loader
+          animation="pulse"
+          [theme]="{
+            height: '12rem',
+            width: '100%'
+          }"
+        />
+      } @else if (!hasPermissionToShowValues) {
+        <p class="text-center text-muted" i18n>
+          The values are hidden in the restricted view.
+        </p>
+      } @else {
+        @if (kpis) {
+          <div class="row g-3 mb-4">
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="kpi">
+                <div class="small text-muted" i18n>Net Worth</div>
+                <gf-value
+                  size="medium"
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="baseCurrency"
+                  [value]="kpis.netWorth"
+                />
+              </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="kpi">
+                <div class="small text-muted" i18n>Excluding Crypto</div>
+                <gf-value
+                  size="medium"
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="baseCurrency"
+                  [value]="kpis.netWorthExcludingCrypto"
+                />
+              </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="kpi">
+                <div class="small text-muted" i18n>Change last Month</div>
+                <gf-value
+                  size="medium"
+                  [colorizeSign]="true"
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="baseCurrency"
+                  [value]="kpis.changeMonth"
+                />
+              </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="kpi">
+                <div class="small text-muted" i18n>Change YTD</div>
+                <gf-value
+                  size="medium"
+                  [colorizeSign]="true"
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="baseCurrency"
+                  [value]="kpis.changeYearToDate"
+                />
+              </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="kpi">
+                <div class="small text-muted" i18n>Contributed YTD</div>
+                <gf-value
+                  size="medium"
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="baseCurrency"
+                  [value]="kpis.contributionYearToDate"
+                />
+                <div class="small text-muted">
+                  <span i18n>Market gain</span>:
+                  {{
+                    kpis.marketGainYearToDate
+                      | number: '1.0-0' : locale
+                  }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="kpi">
+                <div class="small text-muted" i18n>Tax</div>
+                <gf-value
+                  size="medium"
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="baseCurrency"
+                  [value]="kpis.liabilities"
+                />
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (rows.length > 0) {
+          <div class="row">
+            <div class="col-lg-6 mb-5">
+              <h4 class="mb-1" i18n>Net Worth by Component</h4>
+              <p class="small text-muted" i18n>
+                Cash, investments, pension and crypto stacked, liabilities
+                below zero.
+              </p>
+              <div class="chart-container">
+                <canvas #compositionCanvas></canvas>
+              </div>
+            </div>
+            <div class="col-lg-6 mb-5">
+              <h4 class="mb-1" i18n>Investments: Contributed vs. Value</h4>
+              <p class="small text-muted" i18n>
+                The area between both lines is the accumulated market gain.
+              </p>
+              <div class="chart-container">
+                <canvas #investmentsCanvas></canvas>
+              </div>
+            </div>
+            <div class="col-lg-6 mb-5">
+              <h4 class="mb-1" i18n>Monthly Change</h4>
+              <p class="small text-muted" i18n>
+                Change of the net worth excluding crypto, split into the market
+                gain of the investments and the rest.
+              </p>
+              <div class="chart-container">
+                <canvas #monthlyCanvas></canvas>
+              </div>
+            </div>
+            <div class="col-lg-6 mb-5">
+              <h4 class="mb-1" i18n>Net Worth by Year</h4>
+              <p class="small text-muted" i18n>
+                Value at the end of each year and its change.
+              </p>
+              <div class="chart-container">
+                <canvas #yearlyCanvas></canvas>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <p class="text-center text-muted" i18n>
+            No months recorded yet. Add the first one below.
+          </p>
+        }
+
+        <div class="align-items-center d-flex mb-3">
+          <h4 class="mb-0" i18n>Monthly Records</h4>
+          @if (hasPermissionToUpdate && !isEditorOpen) {
+            <button
+              class="ms-auto"
+              color="primary"
+              mat-flat-button
+              (click)="onEditSnapshot()"
+            >
+              <ng-container i18n>Add Month</ng-container>
+            </button>
+          }
+        </div>
+
+        @if (isEditorOpen) {
+          <form class="mb-4" (ngSubmit)="onSave()">
+            <div class="row">
+              <mat-form-field appearance="outline" class="col-md-4">
+                <mat-label i18n>Date</mat-label>
+                <input
+                  matInput
+                  name="date"
+                  required
+                  type="date"
+                  [(ngModel)]="draft.date"
+                />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="col-md-4">
+                <mat-label i18n>Contribution to Investments</mat-label>
+                <input
+                  matInput
+                  name="contribution"
+                  placeholder="0"
+                  type="number"
+                  [(ngModel)]="draft.contribution"
+                  (focus)="draft.contribution = draft.contribution || null"
+                />
+                <span matTextSuffix>{{ baseCurrency }}</span>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="col-md-4">
+                <mat-label i18n>Note</mat-label>
+                <input matInput name="note" [(ngModel)]="draft.note" />
+              </mat-form-field>
+            </div>
+            <div class="row">
+              @for (item of draft.items; track item.name) {
+                <mat-form-field appearance="outline" class="col-md-6">
+                  <mat-label>{{ item.name }}</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    [name]="'value' + $index"
+                    [placeholder]="(item.previousValue | number: '1.0-0' : locale) ?? ''"
+                    [(ngModel)]="item.value"
+                    (blur)="onValueBlur(item)"
+                    (focus)="onValueFocus(item)"
+                  />
+                  <span matTextSuffix>{{ item.unit ?? baseCurrency }}</span>
+                  @if (item.unitPrice) {
+                    <mat-hint
+                      >≈
+                      {{
+                        (item.value ?? item.previousValue) * (item.unitPrice ?? 0)
+                          | number: '1.0-0' : locale
+                      }}
+                      {{ baseCurrency }} ({{
+                        item.unitPrice | number: '1.0-0' : locale
+                      }}
+                      {{ baseCurrency }}/{{ item.unit }})</mat-hint
+                    >
+                  }
+                </mat-form-field>
+              }
+            </div>
+            <div class="d-flex">
+              <button
+                class="ms-auto"
+                mat-button
+                type="button"
+                (click)="onCancel()"
+              >
+                <ng-container i18n>Cancel</ng-container>
+              </button>
+              <button
+                class="ms-2"
+                color="primary"
+                mat-flat-button
+                type="submit"
+              >
+                <ng-container i18n>Save</ng-container>
+              </button>
+            </div>
+            <p class="mt-2 small text-muted" i18n>
+              The fields show the latest values. Click into a field to type the
+              new value, an empty field keeps the latest one. Saving a date
+              which already exists updates it.
+            </p>
+          </form>
+        }
+
+        <div class="mb-3">
+          <h5 class="mb-1" i18n>Tax per Year</h5>
+          <p class="small text-muted" i18n>
+            Tax to be paid for each year, accrued over its 12 months in the
+            column Tax. Set it to 0 once it is paid.
+          </p>
+          <div class="row">
+            @for (taxInput of taxInputs; track taxInput.year) {
+              <mat-form-field
+                appearance="outline"
+                class="col-6 col-md-3 col-xl-2"
+              >
+                <mat-label>{{ taxInput.year }}</mat-label>
+                <input
+                  matInput
+                  placeholder="0"
+                  type="number"
+                  [disabled]="!hasPermissionToUpdate"
+                  [name]="'tax' + taxInput.year"
+                  [(ngModel)]="taxInput.amount"
+                  (change)="onTaxChange(taxInput)"
+                />
+              </mat-form-field>
+            }
+          </div>
+        </div>
+
+        @if (rows.length > 0) {
+          <div class="mb-5 table-responsive">
+            <table class="snapshot-table table-hover w-100">
+              <thead>
+                <tr class="small text-muted">
+                  <th i18n>Date</th>
+                  @for (group of groups; track group.id) {
+                    <th class="text-end">
+                      <span
+                        class="legend-dot"
+                        [style.background-color]="group.color"
+                      ></span
+                      >{{ group.label }}
+                    </th>
+                  }
+                  <th class="text-end" i18n>Net Worth</th>
+                  <th class="text-end" i18n>Contributed</th>
+                  <th class="text-end" i18n>Market gain</th>
+                  <th class="text-end" i18n>Change</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of rows.slice().reverse(); track row.snapshot.id) {
+                  <tr>
+                    <td [title]="row.snapshot.note ?? ''">
+                      {{ row.date | date: 'd MMM yyyy' : 'UTC' : locale }}
+                      @if (row.snapshot.note) {
+                        *
+                      }
+                    </td>
+                    @for (group of groups; track group.id) {
+                      <td class="text-end">
+                        {{ row.byGroup[group.id] | number: '1.0-0' : locale }}
+                      </td>
+                    }
+                    <td class="fw-bold text-end">
+                      {{ row.netWorth | number: '1.0-0' : locale }}
+                    </td>
+                    <td class="text-end">
+                      {{ row.contribution | number: '1.0-0' : locale }}
+                    </td>
+                    <td
+                      class="text-end"
+                      [class.text-danger]="(row.marketGain ?? 0) < 0"
+                      [class.text-success]="(row.marketGain ?? 0) > 0"
+                    >
+                      {{ row.marketGain | number: '1.0-0' : locale }}
+                    </td>
+                    <td
+                      class="text-end"
+                      [class.text-danger]="(row.change ?? 0) < 0"
+                      [class.text-success]="(row.change ?? 0) > 0"
+                    >
+                      {{ row.change | number: '1.0-0' : locale }}
+                    </td>
+                    <td class="text-end">
+                      @if (hasPermissionToUpdate) {
+                        <button
+                          i18n
+                          mat-button
+                          (click)="onEditSnapshot(row.snapshot)"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          mat-button
+                          (click)="onDeleteSnapshot(row.snapshot)"
+                        >
+                          ✕
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>
