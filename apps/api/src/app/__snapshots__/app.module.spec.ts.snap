@@ -134,6 +134,19 @@ exports[`AppModule should keep the security of each route 1`] = `
     "interceptors": [],
     "permission": "accessAdminControl",
   },
+  "DELETE /net-worth/:id": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "updateAccount",
+    "scopes": [
+      "account:update",
+    ],
+  },
   "DELETE /platform/:id": {
     "allowDuringImpersonation": true,
     "guards": [
@@ -573,6 +586,19 @@ exports[`AppModule should keep the security of each route 1`] = `
     ],
     "interceptors": [],
     "permission": "readMarketDataOfMarkets",
+  },
+  "GET /net-worth": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "scopes": [
+      "account:read",
+      "portfolio:read:values",
+    ],
   },
   "GET /platform": {
     "allowDuringImpersonation": true,
@@ -1040,6 +1066,32 @@ exports[`AppModule should keep the security of each route 1`] = `
     ],
     "interceptors": [],
   },
+  "POST /net-worth": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "updateAccount",
+    "scopes": [
+      "account:update",
+    ],
+  },
+  "POST /net-worth/import": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "updateAccount",
+    "scopes": [
+      "account:update",
+    ],
+  },
   "POST /platform": {
     "allowDuringImpersonation": true,
     "guards": [
@@ -1171,6 +1223,32 @@ exports[`AppModule should keep the security of each route 1`] = `
     ],
     "interceptors": [],
     "permission": "accessAdminControl",
+  },
+  "PUT /net-worth/:id": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "updateAccount",
+    "scopes": [
+      "account:update",
+    ],
+  },
+  "PUT /net-worth/tax": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "updateAccount",
+    "scopes": [
+      "account:update",
+    ],
   },
   "PUT /platform/:id": {
     "allowDuringImpersonation": true,

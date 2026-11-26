@@ -939,6 +939,13 @@ export class DataService {
     return this.http.post('/api/v1/watchlist', watchlistItem);
   }
 
+  public putNetWorthSnapshot(
+    aId: string,
+    aSnapshot: CreateNetWorthSnapshotDto
+  ) {
+    return this.http.put(`/api/v1/net-worth/${aId}`, aSnapshot);
+  }
+
   public putNetWorthTax(aTax: UpdateNetWorthTaxDto) {
     return this.http.put('/api/v1/net-worth/tax', aTax);
   }

@@ -9,6 +9,7 @@ import {
   transformTickToAbbreviation
 } from '@ghostfolio/common/chart-helper';
 import { primaryColorRgb } from '@ghostfolio/common/config';
+import { CreateNetWorthSnapshotDto } from '@ghostfolio/common/dtos';
 import { getLocale, getTextColor } from '@ghostfolio/common/helper';
 import {
   NetWorthGroup,
@@ -28,6 +29,7 @@ import { DataService } from '@ghostfolio/ui/services';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -61,6 +63,7 @@ import {
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { format } from 'date-fns';
+import { StatusCodes } from 'http-status-codes';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import OpenColor from 'open-color';
 
@@ -109,18 +112,22 @@ interface NetWorthRow {
   templateUrl: './net-worth-page.html'
 })
 export class GfNetWorthPageComponent implements OnDestroy, OnInit {
-  protected readonly groups: { color: string; id: NetWorthGroup; label: string }[] =
-    [
-      { color: blue[5], id: 'CASH', label: $localize`Cash` },
-      { color: teal[5], id: 'INVESTMENTS', label: $localize`Investments` },
-      { color: grape[5], id: 'PENSION', label: $localize`Pension` },
-      { color: orange[5], id: 'CRYPTO', label: $localize`Crypto` },
-      { color: red[5], id: 'LIABILITY', label: $localize`Tax` }
-    ];
+  protected readonly groups: {
+    color: string;
+    id: NetWorthGroup;
+    label: string;
+  }[] = [
+    { color: blue[5], id: 'CASH', label: $localize`Cash` },
+    { color: teal[5], id: 'INVESTMENTS', label: $localize`Investments` },
+    { color: grape[5], id: 'PENSION', label: $localize`Pension` },
+    { color: orange[5], id: 'CRYPTO', label: $localize`Crypto` },
+    { color: red[5], id: 'LIABILITY', label: $localize`Tax` }
+  ];
 
   protected draft: {
     contribution: number | null;
     date: string;
+    id?: string;
     items: DraftItem[];
     note: string;
   };
@@ -255,6 +262,7 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
       this.draft = {
         contribution: aSnapshot.contribution,
         date: aSnapshot.date.slice(0, 10),
+        id: aSnapshot.id,
         items: aSnapshot.items
           .filter(({ group }) => {
             return group !== 'LIABILITY';
@@ -279,7 +287,10 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
   }
 
   // Keep the previous value unless a new one is entered
-  protected onValueBlur(aItem: { previousValue: number; value: number | null }) {
+  protected onValueBlur(aItem: {
+    previousValue: number;
+    value: number | null;
+  }) {
     if (aItem.value === null || `${aItem.value}` === '') {
       aItem.value = aItem.previousValue;
     }
@@ -296,30 +307,42 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
   }
 
   protected onSave() {
-    this.dataService
-      .postNetWorthSnapshot({
-        contribution: Number(this.draft.contribution) || 0,
-        date: this.draft.date,
-        items: this.draft.items.map(
-          ({ group, name, previousValue, unitPrice, value }) => {
-            const input =
-              value === null || `${value}` === ''
-                ? previousValue
-                : Number(value) || 0;
+    const snapshot: CreateNetWorthSnapshotDto = {
+      contribution: Number(this.draft.contribution) || 0,
+      date: this.draft.date,
+      items: this.draft.items.map(
+        ({ group, name, previousValue, unitPrice, value }) => {
+          const input =
+            value === null || `${value}` === ''
+              ? previousValue
+              : Number(value) || 0;
 
-            return unitPrice
-              ? { group, name, quantity: input, value: input * unitPrice }
-              : { group, name, value: input };
-          }
-        ),
-        note: this.draft.note || undefined
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
+          return unitPrice
+            ? { group, name, quantity: input, value: input * unitPrice }
+            : { group, name, value: input };
+        }
+      ),
+      note: this.draft.note || undefined
+    };
+
+    // An existing month is updated by its id, so changing its date moves it
+    // instead of creating another month
+    const request = this.draft.id
+      ? this.dataService.putNetWorthSnapshot(this.draft.id, snapshot)
+      : this.dataService.postNetWorthSnapshot(snapshot);
+
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      error: (error: HttpErrorResponse) => {
+        if (error.status === StatusCodes.CONFLICT) {
+          alert($localize`There is already a month with this date.`);
+        }
+      },
+      next: () => {
         this.isEditorOpen = false;
 
         this.fetchNetWorth();
-      });
+      }
+    });
   }
 
   protected onTaxChange(aTaxInput: { amount: number | null; year: number }) {
@@ -360,7 +383,13 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
     return tax;
   }
 
-  private toDraftItem({ group, name, quantity, unitPrice, value }: NetWorthItem) {
+  private toDraftItem({
+    group,
+    name,
+    quantity,
+    unitPrice,
+    value
+  }: NetWorthItem) {
     const price = unitPrice ?? (quantity ? value / quantity : undefined);
 
     if (group === 'CRYPTO' && quantity && price) {
@@ -733,7 +762,10 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
             borderColor: `rgb(${getTextColor(this.colorScheme)})`,
             borderWidth: 1.5,
             data: changeRows.map((row, index) => {
-              const window = changeRows.slice(Math.max(index - 11, 0), index + 1);
+              const window = changeRows.slice(
+                Math.max(index - 11, 0),
+                index + 1
+              );
 
               return {
                 x: x(row),
