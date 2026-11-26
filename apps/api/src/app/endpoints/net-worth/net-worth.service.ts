@@ -7,8 +7,9 @@ import {
   NetWorthSnapshotItem
 } from '@ghostfolio/common/interfaces';
 
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { NetWorthSnapshot, Prisma } from '@prisma/client';
+import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 @Injectable()
 export class NetWorthService {
@@ -25,7 +26,18 @@ export class NetWorthService {
     return count > 0;
   }
 
-  public async getNetWorth(userId: string): Promise<NetWorthResponse> {
+  /**
+   * Gives the snapshots, the suggestion for the next month and the taxes. The
+   * monetary values are redacted (null) unless the user may see them, like
+   * the RedactValuesInResponseInterceptor does for the accounts
+   */
+  public async getNetWorth({
+    userId,
+    withValues
+  }: {
+    userId: string;
+    withValues: boolean;
+  }): Promise<NetWorthResponse> {
     const [snapshots, taxes, { accounts }] = await Promise.all([
       this.prismaService.netWorthSnapshot.findMany({
         orderBy: { date: 'asc' },
@@ -101,13 +113,59 @@ export class NetWorthService {
       }
     }
 
-    return {
+    const response: NetWorthResponse = {
       suggestion,
       taxes,
       snapshots: snapshots.map((snapshot) => {
         return this.toSnapshotItem(snapshot);
       })
     };
+
+    return withValues ? response : this.redactValues(response);
+  }
+
+  /**
+   * Updates the snapshot, including its date. Moving it to a day which
+   * already has another snapshot is a conflict, as there is one per day
+   */
+  public async updateSnapshot({
+    id,
+    snapshot,
+    userId
+  }: {
+    id: string;
+    snapshot: CreateNetWorthSnapshotDto;
+    userId: string;
+  }) {
+    const existing = await this.prismaService.netWorthSnapshot.findFirst({
+      select: { id: true },
+      where: { id, userId }
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    const { data, day } = this.toData(snapshot);
+
+    try {
+      return await this.prismaService.netWorthSnapshot.update({
+        data: { ...data, date: day },
+        where: { id }
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new HttpException(
+          getReasonPhrase(StatusCodes.CONFLICT),
+          StatusCodes.CONFLICT
+        );
+      }
+
+      throw error;
+    }
   }
 
   public async upsertSnapshots({
@@ -118,17 +176,8 @@ export class NetWorthService {
     userId: string;
   }) {
     return this.prismaService.$transaction(
-      snapshots.map(({ contribution = 0, date, items, note }) => {
-        const data = {
-          contribution,
-          note,
-          items: items.map(({ group, name, quantity, value }) => {
-            return { group, name, quantity, value };
-          }) as unknown as Prisma.InputJsonValue
-        };
-
-        // Snapshots are kept per calendar day (UTC midnight)
-        const day = new Date(`${date.slice(0, 10)}T00:00:00.000Z`);
+      snapshots.map((snapshot) => {
+        const { data, day } = this.toData(snapshot);
 
         return this.prismaService.netWorthSnapshot.upsert({
           create: { ...data, userId, date: day },
@@ -174,6 +223,54 @@ export class NetWorthService {
     return activities.reduce((sum, { quantity, type }) => {
       return type === 'SELL' ? sum - quantity : sum + quantity;
     }, 0);
+  }
+
+  private redactValues({
+    snapshots,
+    suggestion,
+    taxes
+  }: NetWorthResponse): NetWorthResponse {
+    const redactItem = (item: NetWorthItem): NetWorthItem => {
+      return {
+        ...item,
+        quantity: item.quantity === undefined ? undefined : null,
+        unitPrice: item.unitPrice === undefined ? undefined : null,
+        value: null
+      };
+    };
+
+    return {
+      snapshots: snapshots.map((snapshot) => {
+        return {
+          ...snapshot,
+          contribution: null,
+          items: snapshot.items.map(redactItem)
+        };
+      }),
+      suggestion: suggestion.map(redactItem),
+      taxes: taxes.map(({ year }) => {
+        return { year, amount: null };
+      })
+    };
+  }
+
+  private toData({
+    contribution = 0,
+    date,
+    items,
+    note
+  }: CreateNetWorthSnapshotDto) {
+    return {
+      data: {
+        contribution,
+        note: note ?? null,
+        items: items.map(({ group, name, quantity, value }) => {
+          return { group, name, quantity, value };
+        }) as unknown as Prisma.InputJsonValue
+      },
+      // Snapshots are kept per calendar day (UTC midnight)
+      day: new Date(`${date.slice(0, 10)}T00:00:00.000Z`)
+    };
   }
 
   private toSnapshotItem({

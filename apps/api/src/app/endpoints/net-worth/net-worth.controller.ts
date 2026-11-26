@@ -7,9 +7,12 @@ import {
   UpdateNetWorthTaxDto
 } from '@ghostfolio/common/dtos';
 import { NetWorthResponse } from '@ghostfolio/common/interfaces';
-import { permissions } from '@ghostfolio/common/permissions';
-import { scopes } from '@ghostfolio/common/scopes';
-import type { ImpersonationContext } from '@ghostfolio/common/types';
+import { isRestrictedView, permissions } from '@ghostfolio/common/permissions';
+import { hasScope, scopes } from '@ghostfolio/common/scopes';
+import type {
+  ImpersonationContext,
+  RequestWithUser
+} from '@ghostfolio/common/types';
 
 import {
   Body,
@@ -17,17 +20,22 @@ import {
   Delete,
   Get,
   HttpException,
+  Inject,
   Param,
   Post,
   Put
 } from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 import { NetWorthService } from './net-worth.service';
 
 @Controller('net-worth')
 export class NetWorthController {
-  public constructor(private readonly netWorthService: NetWorthService) {}
+  public constructor(
+    private readonly netWorthService: NetWorthService,
+    @Inject(REQUEST) private readonly request: RequestWithUser
+  ) {}
 
   @Delete(':id')
   @HasPermission(permissions.updateAccount)
@@ -52,9 +60,14 @@ export class NetWorthController {
   @Get()
   @RequiresScope(scopes.accountRead, scopes.portfolioReadValues)
   public async getNetWorth(
-    @Impersonation() { userId }: ImpersonationContext
+    @Impersonation() impersonation: ImpersonationContext
   ): Promise<NetWorthResponse> {
-    return this.netWorthService.getNetWorth(userId);
+    return this.netWorthService.getNetWorth({
+      userId: impersonation.userId,
+      withValues:
+        hasScope(impersonation.scopes, scopes.portfolioReadValues) &&
+        !isRestrictedView(this.request.user)
+    });
   }
 
   @HasPermission(permissions.updateAccount)
@@ -77,6 +90,30 @@ export class NetWorthController {
     @Impersonation() { userId }: ImpersonationContext
   ) {
     return this.netWorthService.upsertTax({ amount, userId, year });
+  }
+
+  @HasPermission(permissions.updateAccount)
+  @Put(':id')
+  @RequiresScope(scopes.accountUpdate)
+  public async updateSnapshot(
+    @Body() data: CreateNetWorthSnapshotDto,
+    @Impersonation() { userId }: ImpersonationContext,
+    @Param('id') id: string
+  ) {
+    const snapshot = await this.netWorthService.updateSnapshot({
+      id,
+      userId,
+      snapshot: data
+    });
+
+    if (!snapshot) {
+      throw new HttpException(
+        getReasonPhrase(StatusCodes.NOT_FOUND),
+        StatusCodes.NOT_FOUND
+      );
+    }
+
+    return snapshot;
   }
 
   @HasPermission(permissions.updateAccount)
