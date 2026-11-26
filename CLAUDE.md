@@ -18,7 +18,7 @@ This is Ferran's fork of [Ghostfolio](https://github.com/ghostfolio/ghostfolio) 
 How it works:
 - A snapshot's items are free-form names and values in the base currency. `GET` also returns a `suggestion` for the next month: the latest snapshot's items, refreshed from Ghostfolio accounts **with the same name**, plus accounts not yet listed. Renaming an account breaks that link.
 - `CRYPTO` items are entered in units; the value is units × the account's current unit price.
-- `LIABILITY` is never stored from the editor: the page derives it from `NetWorthTax` (`getTax` in the page component).
+- `LIABILITY` is never stored from the editor: the page derives it from `NetWorthTax` with `getTaxOwed` (`pages/net-worth/net-worth-tax.ts`). A year's tax accrues over its 12 months, is owed in full until `paidOn` (the month of payment) and not from then on; earlier months keep it.
 - The month's change, like the "Savings" sheet of xExpenses it replaces, excludes crypto.
 
 ## Working on the fork
