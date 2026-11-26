@@ -8,12 +8,12 @@ This is Ferran's fork of [Ghostfolio](https://github.com/ghostfolio/ghostfolio) 
 
 | Path | What it is |
 | --- | --- |
-| `apps/api/src/app/endpoints/net-worth/` | `NetWorthModule`: controller (`GET`, `POST` and `POST /import` on `/api/v1/net-worth`, plus `PUT /tax` and `DELETE /:id`) and service. Routes use `@RequiresScope` + `@Impersonation()` like upstream's account endpoints. |
+| `apps/api/src/app/endpoints/net-worth/` | `NetWorthModule`: controller (`GET`, `POST` and `POST /import` on `/api/v1/net-worth`, plus `PUT /:id`, `PUT /tax` and `DELETE /:id`; `GET` redacts the values in the restricted view) and service. Routes use `@RequiresScope` + `@Impersonation()` like upstream's account endpoints. |
 | `prisma/schema.prisma`, `prisma/migrations/20261028*_added_net_worth_*` | Tables `NetWorthSnapshot` (one per user and UTC day, `items` as JSON) and `NetWorthTax` (one per user and year). |
 | `libs/common/src/lib/dtos/create-net-worth-snapshot.dto.ts` | Validation of snapshots, items, tax and import. |
 | `libs/common/src/lib/interfaces/net-worth-*.ts` | `NetWorthItem` (groups `CASH`, `CRYPTO`, `INVESTMENTS`, `LIABILITY`, `PENSION`) and `NetWorthResponse`. |
 | `apps/client/src/app/pages/net-worth/` | The page: KPIs, charts, monthly table, editor and tax inputs. |
-| Small hooks into upstream files | `app.module.ts`, `app.routes.ts`, `routes.ts`, the header (menu link), `data.service.ts`, the `dtos` and `interfaces` index files. |
+| Small hooks into upstream files | `app.module.ts`, the route snapshot `apps/api/src/app/__snapshots__/app.module.spec.ts.snap` (every new route must be added there), `app.routes.ts`, `routes.ts`, the header (menu link), `data.service.ts`, the `dtos` and `interfaces` index files. |
 
 How it works:
 - A snapshot's items are free-form names and values in the base currency. `GET` also returns a `suggestion` for the next month: the latest snapshot's items, refreshed from Ghostfolio accounts **with the same name**, plus accounts not yet listed. Renaming an account breaks that link.
