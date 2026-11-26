@@ -15,6 +15,7 @@ describe('NetWorthService', () => {
   let getAccountsWithAggregations: jest.Mock;
   let netWorthService: NetWorthService;
   let update: jest.Mock;
+  let upsertTax: jest.Mock;
 
   const snapshot: CreateNetWorthSnapshotDto = {
     contribution: 500,
@@ -32,12 +33,13 @@ describe('NetWorthService', () => {
     findManyTaxes = jest.fn().mockResolvedValue([]);
     getAccountsWithAggregations = jest.fn().mockResolvedValue({ accounts: [] });
     update = jest.fn();
+    upsertTax = jest.fn();
 
     netWorthService = new NetWorthService(
       { getAccountsWithAggregations } as unknown as PortfolioService,
       {
         netWorthSnapshot: { findFirst, findMany: findManySnapshots, update },
-        netWorthTax: { findMany: findManyTaxes }
+        netWorthTax: { findMany: findManyTaxes, upsert: upsertTax }
       } as unknown as PrismaService
     );
   });
@@ -133,7 +135,13 @@ describe('NetWorthService', () => {
           note: 'October'
         }
       ]);
-      findManyTaxes.mockResolvedValue([{ amount: 12000, year: 2026 }]);
+      findManyTaxes.mockResolvedValue([
+        {
+          amount: 12000,
+          paidOn: new Date('2027-05-01T00:00:00.000Z'),
+          year: 2026
+        }
+      ]);
     });
 
     it('returns the values when the user may see them', async () => {
@@ -149,7 +157,7 @@ describe('NetWorthService', () => {
         { group: 'CASH', name: 'Bank', value: 1000 },
         { group: 'CRYPTO', name: 'Wallet', quantity: 0.5, value: 30000 }
       ]);
-      expect(taxes).toEqual([{ amount: 12000, year: 2026 }]);
+      expect(taxes).toEqual([{ amount: 12000, paidOn: '2027-05', year: 2026 }]);
     });
 
     it('redacts every monetary value otherwise', async () => {
@@ -188,7 +196,40 @@ describe('NetWorthService', () => {
           return value === null;
         })
       ).toBe(true);
-      expect(taxes).toEqual([{ amount: null, year: 2026 }]);
+      expect(taxes).toEqual([{ amount: null, paidOn: '2027-05', year: 2026 }]);
+    });
+  });
+
+  describe('upsertTax', () => {
+    it('keeps the month of the payment as its first day', async () => {
+      await netWorthService.upsertTax({
+        amount: 12000,
+        paidOn: '2027-05',
+        userId: 'user-id',
+        year: 2026
+      });
+
+      const paidOn = new Date('2027-05-01T00:00:00.000Z');
+
+      expect(upsertTax).toHaveBeenCalledWith({
+        create: { paidOn, amount: 12000, userId: 'user-id', year: 2026 },
+        update: { paidOn, amount: 12000 },
+        where: { userId_year: { userId: 'user-id', year: 2026 } }
+      });
+    });
+
+    it('clears the month of the payment while the tax is owed', async () => {
+      await netWorthService.upsertTax({
+        amount: 12000,
+        paidOn: null,
+        userId: 'user-id',
+        year: 2026
+      });
+
+      expect(upsertTax.mock.calls[0][0].update).toEqual({
+        amount: 12000,
+        paidOn: null
+      });
     });
   });
 });

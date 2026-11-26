@@ -45,7 +45,7 @@ export class NetWorthService {
       }),
       this.prismaService.netWorthTax.findMany({
         orderBy: { year: 'desc' },
-        select: { amount: true, year: true },
+        select: { amount: true, paidOn: true, year: true },
         where: { userId }
       }),
       this.portfolioService.getAccountsWithAggregations({
@@ -115,7 +115,13 @@ export class NetWorthService {
 
     const response: NetWorthResponse = {
       suggestion,
-      taxes,
+      taxes: taxes.map(({ amount, paidOn, year }) => {
+        return {
+          amount,
+          year,
+          paidOn: paidOn ? paidOn.toISOString().slice(0, 7) : undefined
+        };
+      }),
       snapshots: snapshots.map((snapshot) => {
         return this.toSnapshotItem(snapshot);
       })
@@ -190,16 +196,21 @@ export class NetWorthService {
 
   public async upsertTax({
     amount,
+    paidOn,
     userId,
     year
   }: {
     amount: number;
+    paidOn?: string | null;
     userId: string;
     year: number;
   }) {
+    // The month of the payment is kept as its first day (UTC midnight)
+    const paidOnDate = paidOn ? new Date(`${paidOn}-01T00:00:00.000Z`) : null;
+
     return this.prismaService.netWorthTax.upsert({
-      create: { amount, userId, year },
-      update: { amount },
+      create: { amount, userId, year, paidOn: paidOnDate },
+      update: { amount, paidOn: paidOnDate },
       where: { userId_year: { userId, year } }
     });
   }
@@ -248,8 +259,8 @@ export class NetWorthService {
         };
       }),
       suggestion: suggestion.map(redactItem),
-      taxes: taxes.map(({ year }) => {
-        return { year, amount: null };
+      taxes: taxes.map((tax) => {
+        return { ...tax, amount: null };
       })
     };
   }

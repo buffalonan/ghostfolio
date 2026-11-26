@@ -86,10 +86,10 @@ export class NetWorthController {
   @Put('tax')
   @RequiresScope(scopes.accountUpdate)
   public async updateTax(
-    @Body() { amount, year }: UpdateNetWorthTaxDto,
+    @Body() { amount, paidOn, year }: UpdateNetWorthTaxDto,
     @Impersonation() { userId }: ImpersonationContext
   ) {
-    return this.netWorthService.upsertTax({ amount, userId, year });
+    return this.netWorthService.upsertTax({ amount, paidOn, userId, year });
   }
 
   @HasPermission(permissions.updateAccount)

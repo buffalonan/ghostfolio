@@ -15,6 +15,7 @@ import {
   NetWorthGroup,
   NetWorthItem,
   NetWorthSnapshotItem,
+  NetWorthTaxItem,
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
@@ -66,6 +67,8 @@ import { format } from 'date-fns';
 import { StatusCodes } from 'http-status-codes';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import OpenColor from 'open-color';
+
+import { getTaxOwed } from './net-worth-tax';
 
 const { blue, grape, green, orange, red, teal } = OpenColor;
 
@@ -158,8 +161,12 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
   private readonly monthlyCanvas =
     viewChild<ElementRef<HTMLCanvasElement>>('monthlyCanvas');
   private suggestion: NetWorthItem[] = [];
-  private taxByYear = new Map<number, number>();
-  protected taxInputs: { amount: number | null; year: number }[] = [];
+  private taxes: NetWorthTaxItem[] = [];
+  protected taxInputs: {
+    amount: number | null;
+    paidOn: string | null;
+    year: number;
+  }[] = [];
   private readonly userService = inject(UserService);
   private readonly yearlyCanvas =
     viewChild<ElementRef<HTMLCanvasElement>>('yearlyCanvas');
@@ -345,15 +352,23 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
     });
   }
 
-  protected onTaxChange(aTaxInput: { amount: number | null; year: number }) {
+  protected onTaxChange(aTaxInput: {
+    amount: number | null;
+    paidOn: string | null;
+    year: number;
+  }) {
     const amount = Number(aTaxInput.amount) || 0;
+    const paidOn = aTaxInput.paidOn || null;
+    const tax = this.taxes.find(({ year }) => {
+      return year === aTaxInput.year;
+    });
 
-    if (amount === (this.taxByYear.get(aTaxInput.year) ?? 0)) {
+    if (amount === (tax?.amount ?? 0) && paidOn === (tax?.paidOn ?? null)) {
       return;
     }
 
     this.dataService
-      .putNetWorthTax({ amount, year: aTaxInput.year })
+      .putNetWorthTax({ amount, paidOn, year: aTaxInput.year })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.fetchNetWorth();
@@ -362,25 +377,6 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
 
   protected trackByIndex(index: number) {
     return index;
-  }
-
-  /**
-   * Tax accrued until the given date: the amount of each previous year in full
-   * and the amount of the current year prorated by month
-   */
-  private getTax(aDate: Date) {
-    const year = aDate.getUTCFullYear();
-    let tax = 0;
-
-    for (const [taxYear, amount] of this.taxByYear) {
-      if (taxYear < year) {
-        tax += amount;
-      } else if (taxYear === year) {
-        tax += (amount * (aDate.getUTCMonth() + 1)) / 12;
-      }
-    }
-
-    return tax;
   }
 
   private toDraftItem({
@@ -431,7 +427,10 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
         }
       }
 
-      byGroup.LIABILITY = this.getTax(new Date(snapshot.date));
+      byGroup.LIABILITY = getTaxOwed({
+        date: new Date(snapshot.date),
+        taxes: this.taxes
+      });
 
       contributionCumulative += snapshot.contribution;
 
@@ -529,11 +528,7 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ snapshots, suggestion, taxes }) => {
         this.suggestion = suggestion;
-        this.taxByYear = new Map(
-          taxes.map(({ amount, year }) => {
-            return [year, amount];
-          })
-        );
+        this.taxes = taxes;
 
         const years = new Set([
           new Date().getFullYear(),
@@ -547,7 +542,15 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
             return b - a;
           })
           .map((year) => {
-            return { year, amount: this.taxByYear.get(year) ?? null };
+            const tax = taxes.find((item) => {
+              return item.year === year;
+            });
+
+            return {
+              year,
+              amount: tax?.amount ?? null,
+              paidOn: tax?.paidOn ?? null
+            };
           });
 
         this.buildRows(snapshots);

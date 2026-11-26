@@ -253,25 +253,37 @@
           <h5 class="mb-1" i18n>Tax per Year</h5>
           <p class="small text-muted" i18n>
             Tax to be paid for each year, accrued over its 12 months in the
-            column Tax. Set it to 0 once it is paid.
+            column Tax and owed in full until it is paid. Enter the month of
+            the payment once it is paid: from then on it is no longer owed,
+            while the earlier months keep it.
           </p>
           <div class="row">
             @for (taxInput of taxInputs; track taxInput.year) {
-              <mat-form-field
-                appearance="outline"
-                class="col-6 col-md-3 col-xl-2"
-              >
-                <mat-label>{{ taxInput.year }}</mat-label>
-                <input
-                  matInput
-                  placeholder="0"
-                  type="number"
-                  [disabled]="!hasPermissionToUpdate"
-                  [name]="'tax' + taxInput.year"
-                  [(ngModel)]="taxInput.amount"
-                  (change)="onTaxChange(taxInput)"
-                />
-              </mat-form-field>
+              <div class="col-12 col-md-6 col-xl-4 d-flex gap-2">
+                <mat-form-field appearance="outline" class="flex-grow-1">
+                  <mat-label>{{ taxInput.year }}</mat-label>
+                  <input
+                    matInput
+                    placeholder="0"
+                    type="number"
+                    [disabled]="!hasPermissionToUpdate"
+                    [name]="'tax' + taxInput.year"
+                    [(ngModel)]="taxInput.amount"
+                    (change)="onTaxChange(taxInput)"
+                  />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="flex-grow-1">
+                  <mat-label i18n>Paid in</mat-label>
+                  <input
+                    matInput
+                    type="month"
+                    [disabled]="!hasPermissionToUpdate"
+                    [name]="'paidOn' + taxInput.year"
+                    [(ngModel)]="taxInput.paidOn"
+                    (change)="onTaxChange(taxInput)"
+                  />
+                </mat-form-field>
+              </div>
             }
           </div>
         </div>
