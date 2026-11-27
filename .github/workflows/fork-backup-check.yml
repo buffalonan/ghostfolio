@@ -1,4 +1,5 @@
 # Fork only (not upstream): tests the backup restore check in fork/backup/.
+# Postgres runs in a container and every tool goes through `docker exec`, as gf-postgres does on the Mac.
 name: Fork backup check
 
 on:
@@ -15,20 +16,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
-    env:
-      PGHOST: localhost
-      PGPORT: 5432
-      PGUSER: postgres
-      PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
+      - name: Start Postgres 15 (like gf-postgres)
+        run: |
+          docker run -d --name gf-postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password \
+            -e POSTGRES_DB=ghostfolio-db postgres:15-alpine
+          for i in $(seq 1 30); do docker exec gf-postgres pg_isready -U user -q && break; sleep 2; done
       - name: Restore check tests
+        env:
+          GF_PG_EXEC: docker exec -i -e PGUSER=user gf-postgres
         run: sh fork/backup/test-check-backup.sh

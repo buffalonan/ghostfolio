@@ -1,11 +1,15 @@
 #!/bin/sh
-# Tests de check-backup.sh contra un Postgres de pruebas (en CI, el servicio del workflow fork-backup-check.yml).
-# Necesita pg_dump, psql y createdb en el PATH, y PGHOST/PGPORT/PGUSER apuntando a ese Postgres.
+# Tests de check-backup.sh contra un Postgres de pruebas.
+#  - Como en el Mac (y en CI, workflow fork-backup-check.yml): un contenedor Postgres 15 y
+#      GF_PG_EXEC="docker exec -i -e PGUSER=<usuario> <contenedor>" fork/backup/test-check-backup.sh
+#  - Con un Postgres local: GF_PG_EXEC="" GF_PG_USER=postgres PGHOST=... fork/backup/test-check-backup.sh
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
-export GF_PG_EXEC="" GF_PG_USER="${PGUSER:-postgres}"
+export GF_PG_EXEC="${GF_PG_EXEC-}"
+# Todas las herramientas de Postgres pasan por el mismo sitio que usa check-backup.sh (versión 15 en el contenedor)
+pgx() { $GF_PG_EXEC "$@"; }
 work=$(mktemp -d)
-trap 'rm -rf "$work"; dropdb --if-exists gf_fixture > /dev/null 2>&1' EXIT
+trap 'rm -rf "$work"; pgx dropdb --if-exists gf_fixture > /dev/null 2>&1' EXIT
 failures=0
 
 expect() { # expect <código> <texto> -- comando…
@@ -21,15 +25,15 @@ expect() { # expect <código> <texto> -- comando…
 
 # Una base de datos con la forma de la de Ghostfolio (solo las tablas que mira la comprobación)
 fixture() { # fixture <actividades>
-  dropdb --if-exists gf_fixture > /dev/null 2>&1; createdb gf_fixture
-  psql -q -d gf_fixture -c 'CREATE TABLE "User" (id text); CREATE TABLE "Account" (id text);
+  pgx dropdb --if-exists gf_fixture > /dev/null 2>&1; pgx createdb gf_fixture
+  pgx psql -q -d gf_fixture -c 'CREATE TABLE "User" (id text); CREATE TABLE "Account" (id text);
     CREATE TABLE "Order" (id text, date timestamp); CREATE TABLE "NetWorthSnapshot" (id text); CREATE TABLE "NetWorthTax" (id text);
     INSERT INTO "User" VALUES ($$u$$); INSERT INTO "Account" VALUES ($$a$$); INSERT INTO "NetWorthTax" VALUES ($$t$$);'
-  i=0; while [ "$i" -lt "$1" ]; do psql -q -d gf_fixture -c "INSERT INTO \"Order\" VALUES ('o$i', '2026-11-0$((i + 1))')"; i=$((i + 1)); done
+  i=0; while [ "$i" -lt "$1" ]; do pgx psql -q -d gf_fixture -c "INSERT INTO \"Order\" VALUES ('o$i', '2026-11-0$((i + 1))')"; i=$((i + 1)); done
 }
 archive() { # archive <nombre> : tar.gz como el de gf-backup
   mkdir -p "$work/$1/ghostfolio-2026-11-29/ficheros"
-  pg_dump -Fc -d gf_fixture > "$work/$1/ghostfolio-2026-11-29/ghostfolio.dump"
+  pgx pg_dump -Fc -d gf_fixture > "$work/$1/ghostfolio-2026-11-29/ghostfolio.dump"
   echo x > "$work/$1/ghostfolio-2026-11-29/ficheros/xExpenses.xlsx"
   tar -czf "$work/$1.tar.gz" -C "$work/$1" ghostfolio-2026-11-29
   echo "$work/$1.tar.gz"
@@ -45,15 +49,15 @@ expect 0 "OK" -- "$here/check-backup.sh" "$work/buena/ghostfolio-2026-11-29/ghos
 expect 1 "menos de 5 actividades" -- env GF_MIN_ACTIVITIES=5 "$here/check-backup.sh" "$good"
 
 # La base de datos temporal se borra y la de origen no se toca
-[ -z "$(psql -Atc "SELECT 1 FROM pg_database WHERE datname = 'gf_restore_check'")" ] \
+[ -z "$(pgx psql -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname = 'gf_restore_check'")" ] \
   && echo "ok: gf_restore_check borrada" || { echo "FAIL: gf_restore_check sigue ahí"; failures=$((failures + 1)); }
-[ "$(psql -d gf_fixture -Atc 'SELECT count(*) FROM "Order"')" = 2 ] \
+[ "$(pgx psql -d gf_fixture -Atc 'SELECT count(*) FROM "Order"')" = 2 ] \
   && echo "ok: la base de datos original sigue igual" || { echo "FAIL: la original cambió"; failures=$((failures + 1)); }
 
 fixture 0
 expect 1 "menos de 1 actividades" -- "$here/check-backup.sh" "$(archive sin-actividades)"
 
-psql -q -d gf_fixture -c 'DROP TABLE "NetWorthSnapshot"'
+pgx psql -q -d gf_fixture -c 'DROP TABLE "NetWorthSnapshot"'
 expect 1 "falta la tabla NetWorthSnapshot" -- "$here/check-backup.sh" "$(archive sin-tabla)"
 
 : > "$work/vacio.tar.gz"
