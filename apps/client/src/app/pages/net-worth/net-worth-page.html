@@ -80,10 +80,7 @@
                 />
                 <div class="small text-muted">
                   <span i18n>Market gain</span>:
-                  {{
-                    kpis.marketGainYearToDate
-                      | number: '1.0-0' : locale
-                  }}
+                  {{ kpis.marketGainYearToDate | number: '1.0-0' : locale }}
                 </div>
               </div>
             </div>
@@ -107,8 +104,8 @@
             <div class="col-lg-6 mb-5">
               <h4 class="mb-1" i18n>Net Worth by Component</h4>
               <p class="small text-muted" i18n>
-                Cash, investments, pension and crypto stacked, liabilities
-                below zero.
+                Cash, investments, pension and crypto stacked, liabilities below
+                zero.
               </p>
               <div class="chart-container">
                 <canvas #compositionCanvas></canvas>
@@ -201,7 +198,9 @@
                     matInput
                     type="number"
                     [name]="'value' + $index"
-                    [placeholder]="(item.previousValue | number: '1.0-0' : locale) ?? ''"
+                    [placeholder]="
+                      (item.previousValue | number: '1.0-0' : locale) ?? ''
+                    "
                     [(ngModel)]="item.value"
                     (blur)="onValueBlur(item)"
                     (focus)="onValueFocus(item)"
@@ -211,8 +210,8 @@
                     <mat-hint
                       >≈
                       {{
-                        (item.value ?? item.previousValue) * (item.unitPrice ?? 0)
-                          | number: '1.0-0' : locale
+                        (item.value ?? item.previousValue) *
+                          (item.unitPrice ?? 0) | number: '1.0-0' : locale
                       }}
                       {{ baseCurrency }} ({{
                         item.unitPrice | number: '1.0-0' : locale
@@ -253,9 +252,9 @@
           <h5 class="mb-1" i18n>Tax per Year</h5>
           <p class="small text-muted" i18n>
             Tax to be paid for each year, accrued over its 12 months in the
-            column Tax and owed in full until it is paid. Enter the month of
-            the payment once it is paid: from then on it is no longer owed,
-            while the earlier months keep it.
+            column Tax and owed in full until it is paid. Enter the month of the
+            payment once it is paid: from then on it is no longer owed, while
+            the earlier months keep it.
           </p>
           <div class="row">
             @for (taxInput of taxInputs; track taxInput.year) {
