@@ -61,6 +61,9 @@ Ghostfolio no sigue: efectivo fuera, pensiones, cripto en unidades) con el impue
 - `LIABILITY` (impuesto) no se guarda desde el editor: se deriva de `NetWorthTax` con `getTaxOwed`
   (`pages/net-worth/net-worth-tax.ts`): el importe del año se acumula 1/12 cada mes, se debe entero hasta `paidOn`
   (mes de pago, campo «Paid in» de la página) y deja de contar desde ese mes; los meses anteriores no cambian.
+- Tests de Net Worth: `net-worth.service.spec.ts` (editar, redacción, impuesto), `net-worth-suggestion.spec.ts`
+  (sugerencia: cuentas por nombre, cripto en unidades, importación) y `pages/net-worth/net-worth-tax.spec.ts` (`getTaxOwed`).
+  La página (componente Angular) no tiene tests.
 - El cambio mensual excluye cripto (como la hoja "Savings" de xExpenses). VIAC (3a) y ComPlan (2º pilar) son líneas separadas pero se suman como "Pension".
 
 **Desplegar un cambio en el Mac:** construir la imagen `ghostfolio-fork:local` desde el clon con el `Dockerfile` (tarda 5-10 min)
