@@ -10,6 +10,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   ValidateNested
 } from 'class-validator';
@@ -53,6 +54,13 @@ export class CreateNetWorthSnapshotDto {
 export class UpdateNetWorthTaxDto {
   @IsNumber()
   amount: number;
+
+  /**
+   * Month in which the tax was paid (YYYY-MM), null while it is still owed
+   */
+  @IsOptional()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
+  paidOn?: string | null;
 
   @IsInt()
   year: number;

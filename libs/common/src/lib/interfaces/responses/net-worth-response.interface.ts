@@ -10,6 +10,12 @@ export interface NetWorthSnapshotItem {
 
 export interface NetWorthTaxItem {
   amount: number;
+
+  /**
+   * Month in which the tax was paid (YYYY-MM). Until then it is owed in full
+   */
+  paidOn?: string;
+
   year: number;
 }
 

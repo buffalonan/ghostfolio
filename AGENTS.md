@@ -58,8 +58,9 @@ Ghostfolio no sigue: efectivo fuera, pensiones, cripto en unidades) con el impue
 - Los items de una instantánea son nombres libres y valores en moneda base. `GET` devuelve una `suggestion` para el mes
   siguiente: los items del último mes, actualizados con las cuentas de Ghostfolio **del mismo nombre** (renombrar una cuenta rompe el vínculo).
 - `CRYPTO` se introduce en unidades (BTC); valor = unidades × precio actual de la cuenta.
-- `LIABILITY` (impuesto) no se guarda desde el editor: se deriva de `NetWorthTax`. Hoy en `main`: el importe del año se
-  prorratea en 12 meses y se pone a 0 cuando se paga. Con el PR #4: `getTaxOwed` (`pages/net-worth/net-worth-tax.ts`) y `paidOn`.
+- `LIABILITY` (impuesto) no se guarda desde el editor: se deriva de `NetWorthTax` con `getTaxOwed`
+  (`pages/net-worth/net-worth-tax.ts`): el importe del año se acumula 1/12 cada mes, se debe entero hasta `paidOn`
+  (mes de pago, campo «Paid in» de la página) y deja de contar desde ese mes; los meses anteriores no cambian.
 - El cambio mensual excluye cripto (como la hoja "Savings" de xExpenses). VIAC (3a) y ComPlan (2º pilar) son líneas separadas pero se suman como "Pension".
 
 **Desplegar un cambio en el Mac:** construir la imagen `ghostfolio-fork:local` desde el clon con el `Dockerfile` (tarda 5-10 min)
@@ -80,7 +81,7 @@ DEGIRO están bajo la cuenta "Interactive Brokers" (se traspasó el 2026-09-01).
 
 - Funciona: Ghostfolio con la imagen del fork, arranque automático, proxy en el 80, acceso por Tailscale, backup semanal a Drive (último: 2026-11-22).
 - Datos al día hasta el 2026-11-24 (compras de VT de noviembre añadidas, efectivo IBKR actualizado, DEGIRO cuadrado).
-- Main incluye PR #1 (Net Worth) y PR #3 (mover mes sin duplicar, redacción en API). PR #4 (impuesto con mes de pago) abierto.
+- Main incluye PR #1 (Net Worth), PR #3 (mover mes sin duplicar, redacción en API) y PR #4 (impuesto con mes de pago).
 - La app de recetas (8080) no arranca sola tras reiniciar el Mac.
 - rclone usa el cliente compartido de Google, que puede dejar de funcionar en 2026.
 - Las sesiones de Claude no suelen poder ejecutar `npm test`/`npm run lint` en local (sin acceso a instalar paquetes); el CI de GitHub sí los ejecuta.
@@ -99,7 +100,7 @@ DEGIRO están bajo la cuenta "Interactive Brokers" (se traspasó el 2026-09-01).
 
 ## Pendiente
 
-- Revisar y mergear PR #4; después, poner el mes de pago de los años ya pagados y volver a poner el importe real en los años dejados a 0.
+- Tras mergear PR #4: poner el mes de pago de los años ya pagados y volver a poner el importe real en los años dejados a 0.
 - Cerrar PR #2 (CLAUDE.md antiguo): su contenido está ahora en este archivo.
 - Comprobar que el CI de GitHub pasa en `main` tras PR #3.
 - Cuando rclone deje de funcionar con Google: crear un client ID propio en Google Cloud.
