@@ -27,6 +27,10 @@ Corre solo en su Mac; moneda base CHF. Este repo es un fork **público** (AGPL-3
 - **Backups (solo datos):** `gf-backup` hace `pg_dump` + hojas xExpenses/Expenses/pExpenses + CSVs de brokers en un
   `.tar.gz` en `~/Documents/ghostfolio-backups/weekly/` y lo sube con rclone (remote `gdrive`) a Google Drive `Backups/Ghostfolio`.
   Dumps sueltos previos a cambios en `~/Documents/ghostfolio-backups/*.dump`.
+- **Comprobación de restauración:** `fork/backup/check-backup.sh <copia.tar.gz>` restaura el volcado en una base de
+  datos temporal (`gf_restore_check`) de `gf-postgres`, comprueba usuario, cuentas, actividades y tablas de Net Worth,
+  y la borra; nunca toca la base de datos real. `gf-backup` la ejecuta tras cada copia (copia en `~/.local/bin/gf-backup-check`)
+  y avisa con una notificación de macOS si falla. Tests: `fork/backup/test-check-backup.sh` (workflow `fork-backup-check.yml`).
 - **Datos personales:** en la base de datos de Ghostfolio (Postgres en Docker), las hojas en `~/Downloads` (xExpenses es el
   checkpoint mensual) y la memoria del proyecto de Claude. Credenciales: `.env` del clon (no versionado, contiene las claves
   de Postgres/Redis/JWT) y la config de rclone del Mac.
