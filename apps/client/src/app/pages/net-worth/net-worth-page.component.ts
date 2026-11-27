@@ -358,7 +358,8 @@ export class GfNetWorthPageComponent implements OnDestroy, OnInit {
     year: number;
   }) {
     const amount = Number(aTaxInput.amount) || 0;
-    const paidOn = aTaxInput.paidOn || null;
+    // An emptied month field gives '', which means the tax is still owed
+    const paidOn = aTaxInput.paidOn === '' ? null : aTaxInput.paidOn;
     const tax = this.taxes.find(({ year }) => {
       return year === aTaxInput.year;
     });
